@@ -4,11 +4,9 @@ A Claude Code mod that suggests your next prompt after every reply, tells you wh
 
 It adds a strip above the prompt box:
 
-```
-▲ ▼ 16/16                      instead of just also adding a suggested text, I also want…
-✦ restart the app and check the new suggestion bar
-  The new lines only load after an app restart. · Last reply: Added a reason…   Mode Push ▾  Less
-```
+![After a reply: the history row, the suggestion, its reason and a recap of the reply, and the Mode dropdown](docs/after-a-reply.png)
+
+<sub>Screens are design mock-ups of the desktop app's Code tab, drawn with a sample conversation.</sub>
 
 - **History row** (top): your latest prompt, with ▲ ▼ to step back through earlier ones. `/prompts` opens them all in a pane; click one to copy it.
 - **Suggestion** (under it, desktop app): what you would likely type next. Click it (or **Use it** for a long one) to put it in the box. Nothing is sent until you press Enter.
@@ -18,6 +16,24 @@ It adds a strip above the prompt box:
   - **Push**: one or two sentences naming the concrete next task.
   - **Autopilot**: a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. It leaves out deploying, pushing, merging, migrations and deleting data unless you already asked for them in the chat.
 - **Less / More**: fold the suggestion to one line, or show it in full. Your Mode and view are remembered across chats.
+
+### Modes
+
+![The Mode dropdown open: Nudge, Push and Autopilot](docs/modes.png)
+
+Autopilot writes a brief Claude can run to the end on its own:
+
+![An Autopilot suggestion: a full paragraph with a Use it button](docs/autopilot.png)
+
+### Less and More
+
+Fold a long suggestion to one line; **Use it** still puts the whole text in the box.
+
+![The suggestion folded to one line, with Use it and More](docs/folded.png)
+
+While a suggestion is being written, the strip says so:
+
+![Pulsing dots and "Thinking of an Autopilot suggestion…"](docs/thinking.png)
 
 ## Install
 
