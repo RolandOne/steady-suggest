@@ -53,7 +53,7 @@ const SETTLE_MS = 400
 const RETRY_MS = 1_500
 const LOG_LINES = 500
 const RECENT = 8
-// A guess that fails the checks gets one more try.
+// A guess that is empty or fails the checks gets one more try.
 const GUESSES = 2
 
 // What the transcript wraps around the person's own prompts.
@@ -382,7 +382,8 @@ async function guess($: EngineInterface, ask: string, why: string, rule: LengthR
   let rejected: string | undefined = 'empty'
   for (let tries = 0; tries < GUESSES && rejected !== undefined; tries += 1) {
     const retry = tries === 0 ? '' : `\n\nYour last guess "${picked.text}" was rejected (${rejected}). Give a different one.`
-    // An empty reply is the model staying silent on purpose, so it ends here.
+    // An empty or failed answer is retried once, told why; only a call that
+    // gets no answer at all ends the loop early.
     const reply = await $.model.complete({ model: MODEL, prompt: ask + retry, maxTokens: rule.maxTokens })
     if (!reply.isAnswered) {
       await note($, `no reply (${why}): ${reply.reason}`)

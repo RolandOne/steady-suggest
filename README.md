@@ -6,32 +6,36 @@ It adds a strip above the prompt box:
 
 ![After a reply: the history row, the suggestion, its reason and a recap of the reply, and the Mode dropdown](docs/after-a-reply.png)
 
-<sub>Screens are design mock-ups of the desktop app's Code tab, drawn with a sample conversation.</sub>
+<sub>Screens are design mock-ups of the desktop app's Code tab, drawn with a sample conversation. The real strip uses the app's own fonts and colours. Their sources are in <code>docs/mockups</code>; <code>shoot.mjs</code> there renders them.</sub>
 
-- **History row** (top): your latest prompt, with ▲ ▼ to step back through earlier ones. `/prompts` opens them all in a pane; click one to copy it.
-- **Suggestion** (under it, desktop app): what you would likely type next. Click it (or **Use it** for a long one) to put it in the box. Nothing is sent until you press Enter.
+- **History row** (top): your latest prompt, with ▲ ▼ to step back through earlier ones. While your newest prompt is still on screen the row stays hidden (`/pin-prompt smart` turns that off). `/prompts` lists them all in a pane; click one to copy it.
+- **Suggestion** (under it, desktop app): what you would likely type next. Click it to put it in the box; a suggestion over 80 characters wraps, with a **Use it** button instead. Nothing is sent until you press Enter. The line hides while Claude is working and clears when you send your next message.
 - **Why and recap**: a one-sentence reason and a few words on Claude's last reply, on the dim line under the suggestion.
 - **Mode**: how far the suggestion goes.
-  - **Nudge**: 2–12 words, like Claude Code's own suggestion.
-  - **Push**: one or two sentences naming the concrete next task.
-  - **Autopilot**: a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. It leaves out deploying, pushing, merging, migrations and deleting data unless you already asked for them in the chat.
+  - **Nudge** (the default): 2–12 words, like Claude Code's own suggestion.
+  - **Push**: one or two sentences (10–40 words) naming the concrete next task and the files or checks it involves.
+  - **Autopilot**: a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. Opus is told to leave out deploying, pushing, merging, migrations, seed scripts and deleting data unless you already asked for them in the chat, so read a brief before you send it.
 - **Less / More**: fold the suggestion to one line, or show it in full. Your Mode and view are remembered across chats.
 
 ### Modes
 
+Pick a mode from the **Mode** dropdown at the end of the dim line. The suggestion for the current reply is written again at that length right away.
+
 ![The Mode dropdown open: Nudge, Push and Autopilot](docs/modes.png)
 
-Autopilot writes a brief Claude can run to the end on its own:
+Autopilot writes a brief Claude can run to the end on its own. The strip shows up to 600 characters of it; **Use it** puts the whole brief in the box.
 
 ![An Autopilot suggestion: a full paragraph with a Use it button](docs/autopilot.png)
 
 ### Less and More
 
-Fold a long suggestion to one line; **Use it** still puts the whole text in the box.
+**Less** folds the suggestion to one line and hides the reason line and the Mode dropdown. A long suggestion is cut at 90 characters, and **Use it** still puts the whole text in the box; a short one stays clickable. **More** brings the full view back.
 
 ![The suggestion folded to one line, with Use it and More](docs/folded.png)
 
-While a suggestion is being written, the strip says so:
+### While it thinks
+
+While a suggestion is being written, the line under the history row shows pulsing dots and "Thinking of a suggestion…" (in Push or Autopilot, "Thinking of a Push suggestion…" or "Thinking of an Autopilot suggestion…"). It stays up at least two seconds.
 
 ![Pulsing dots and "Thinking of an Autopilot suggestion…"](docs/thinking.png)
 
@@ -65,12 +69,12 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 
 ## How it works
 
-1. When Claude's reply ends, the mod gathers your last few prompts and the end of the reply.
+1. When Claude's reply ends (or you open a chat that has no suggestion yet), the mod gathers your last few prompts and the end of the reply.
 2. It asks Opus, in a side call outside your chat, for three lines: the suggestion, why, and a recap. The Mode sets how long the suggestion may be and how much of the session Opus reads.
-3. It runs Claude Code's own checks on the suggestion (length, no "Let me…", no "looks good") and retries once if it fails.
+3. It checks the suggestion the way Claude Code checks its own (length, no "Let me…", no "looks good") and asks once more if it fails or comes back empty. If the second answer fails too, the line stays empty for that reply.
 4. It shows the result in the strip and, where the app allows, as the dim suggestion inside the box.
 
-**Cost:** every reply makes one Opus call on your own account. Autopilot calls are larger.
+**Cost:** every reply makes one Opus call on your own account, a second when the first suggestion fails the checks, and another each time you change the Mode. Autopilot calls are larger.
 
 **Desktop and terminal:** the suggestion strip draws in the desktop app's Code tab. In a terminal the mod fills in Claude Code's own suggestion on the turns where it skips one, and the history row adds a **Go to** button that scrolls the chat to that prompt (the desktop app does not let a mod scroll the chat).
 

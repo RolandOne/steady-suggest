@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>steady-suggest: Autopilot brief</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#e8a58c}a:hover{color:#f3c2ae}
+</style>
+</helmet>
+<div style="width: 900px; height: 400px; box-sizing: border-box; padding: 28px 40px 20px; background: #262624; color: #e8e6e1; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px">
+  <p style="margin: 0; max-width: 700px; font-size: 15px; line-height: 1.6">Done. Settings now has a <strong>Dark mode</strong> toggle. The choice is saved in localStorage and applied on load, so it survives a refresh. I changed <code style="font-size: 13px; color: #e8a58c">SettingsPage.tsx</code> and <code style="font-size: 13px; color: #e8a58c">theme.ts</code> and added two tests for the toggle.</p>
+  <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: #2b2a28; border-radius: 10px; font-size: 13px; line-height: 1.45">
+    <div style="display: flex; align-items: center; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0">
+        <button type="button" aria-label="Older prompt" style="font: inherit; padding: 0; background: transparent; border: 0; color: #e8e6e1">▲</button>
+        <button type="button" aria-label="Newer prompt" disabled style="font: inherit; padding: 0; background: transparent; border: 0; color: #a3a09a">▼</button>
+        <span style="color: #a3a09a">4/4</span>
+      </div>
+      <p style="flex: 1; min-width: 0; margin: 0; text-align: right">add a dark mode toggle to the settings page and remember the choice</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="display: flex; align-items: flex-start; gap: 8px; min-width: 0">
+        <span style="color: #d97757; flex-shrink: 0" aria-hidden="true">✦</span>
+        <p style="flex: 1; min-width: 0; margin: 0">Finish dark mode across the whole app: move the remaining pages and components onto the theme colours from theme.ts, make sure charts and code blocks follow the toggle too, add a test that the choice survives a reload, run the unit tests and the settings tests, and fix anything that breaks. Keep going until every page follows the toggle, without checking in unless you are blocked.</p>
+        <button type="button" style="font: inherit; flex-shrink: 0; padding: 0; background: transparent; border: 0; color: #e8e6e1; cursor: pointer">Use it</button>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 16px; padding-left: 22px">
+        <p style="flex: 1; min-width: 0; margin: 0; color: #a3a09a">Only Settings follows the toggle so far. · Last reply: Added a saved dark mode toggle to Settings, with two tests.</p>
+        <div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0">
+          <button type="button" aria-haspopup="listbox" style="font: inherit; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; background: #3a3936; border: 1px solid #55534e; border-radius: 6px; color: #e8e6e1; cursor: pointer"><span style="color: #a3a09a">Mode</span>Autopilot<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="#a3a09a" strokeWidth="1.4" strokeLinecap="round"></path></svg></button>
+          <button type="button" style="font: inherit; padding: 0; background: transparent; border: 0; color: #a3a09a; cursor: pointer">Less</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #30302e; border: 1px solid #45433f; border-radius: 14px">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#a8a59e" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M9 3v12M3 9h12"></path></svg>
+    <p style="flex: 1; min-width: 0; margin: 0; font-size: 15px; color: #8d8a83">Type / for commands</p>
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#a8a59e" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><rect x="6.5" y="2.5" width="5" height="9" rx="2.5"></rect><path d="M4 9a5 5 0 0 0 10 0M9 14v2"></path></svg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":400}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
