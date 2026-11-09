@@ -1,0 +1,8 @@
+{
+  "name": "steady-suggest",
+  "version": "1.0.0",
+  "description": "A next-prompt suggestion after every reply, with a reason and a short recap, Nudge / Push / Autopilot modes, and your prompt history above the box",
+  "author": { "name": "RolandOne" },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

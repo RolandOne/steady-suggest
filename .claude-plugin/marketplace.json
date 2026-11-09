@@ -1,0 +1,6 @@
+{
+  "name": "steady-suggest",
+  "owner": { "name": "RolandOne" },
+  "description": "steady-suggest: next-prompt suggestions with Nudge / Push / Autopilot modes and a prompt history row for Claude Code",
+  "plugins": [{ "name": "steady-suggest", "source": "./" }]
+}
