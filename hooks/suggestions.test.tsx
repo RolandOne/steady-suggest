@@ -45,7 +45,7 @@ const MESSAGES: Message[] = [
 // The hooks here stand for the engine beneath the mod.
 function engine(on: On, world: World) {
   const clock = mock.clock(on, { now: 1_700_000_000_000 })
-  const seen = { asks: [] as string[], models: [] as string[], shown: [] as string[], fills: [] as string[], statuses: [] as (string | undefined)[], toasts: [] as string[] }
+  const seen = { asks: [] as string[], models: [] as string[], caps: [] as (number | undefined)[], efforts: [] as (string | undefined)[], shown: [] as string[], fills: [] as string[], statuses: [] as (string | undefined)[], toasts: [] as string[] }
   const files = new Map<string, string>()
   const store = new Map<string, unknown>(Object.entries(world.store ?? {}))
 
@@ -64,6 +64,8 @@ function engine(on: On, world: World) {
   on('model.complete', async (_, e) => {
     seen.asks.push(e.prompt)
     seen.models.push(e.model)
+    seen.caps.push(e.maxTokens)
+    seen.efforts.push(e.effort)
     await world.gate
     const usage = { ...WARM, cache_read_input_tokens: 0 }
 
@@ -181,7 +183,10 @@ test('a cold-cache turn gets a filled-in suggestion on the desktop', async ($, o
   await clock.advance(SHOWS)
 
   expect(seen.shown).toEqual(['commit it'])
-  expect(seen.models).toEqual(['opus'])
+  // Nudge, the default, is Sonnet's.
+  expect(seen.models).toEqual(['claude-sonnet-5-5'])
+  expect(seen.caps).toEqual([1_024])
+  expect(seen.efforts).toEqual(['low'])
   expect(seen.asks[0]).toContain('1. can we add a toggle?')
   expect(seen.asks[0]).not.toContain('system-reminder')
   expect([...files.values()][0]).toContain('shown (cold cache): commit it')
@@ -447,7 +452,7 @@ test('the hint line says the mod runs here until there is a guess, then offers i
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
 
   const before = await $.ui.mount({ ...HINT, surface: 'desktop' })
-  expect(await before.find({ type: 'Text', text: '✦ Suggestions by steady-suggest (opus)' })).toBeDefined()
+  expect(await before.find({ type: 'Text', text: '✦ Suggestions by steady-suggest (Sonnet 5.5)' })).toBeDefined()
   await before.unmount()
 
   await turn($, WARM)
@@ -459,7 +464,7 @@ test('the hint line says the mod runs here until there is a guess, then offers i
 
   await $.turn.start({ text: 'next', turnId: 'u' })
   const next = await $.ui.mount({ ...HINT, surface: 'desktop', props: { ...HINT.props } })
-  expect(await next.find({ type: 'Text', text: '✦ Suggestions by steady-suggest (opus)' })).toBeDefined()
+  expect(await next.find({ type: 'Text', text: '✦ Suggestions by steady-suggest (Sonnet 5.5)' })).toBeDefined()
 })
 
 test('the band says a suggestion is on its way, then offers it, then clears on the next turn', async ($, on) => {
@@ -571,7 +576,7 @@ test('/suggest thorough asks for a whole task, keeps it, and draws a long guess 
 
   const set = await $.command.run(slash('autopilot'))
   // Before any turn the transcript's last reply is asked about again.
-  expect(set.text).toBe('Suggestion mode: Autopilot. Writing a new suggestion for this reply.')
+  expect(set.text).toBe('Suggestion mode: Autopilot (Fable 5.2). Writing a new suggestion for this reply.')
   expect(store.get('length')).toBe('thorough')
 
   await turn($, WARM)
@@ -579,6 +584,11 @@ test('/suggest thorough asks for a whole task, keeps it, and draws a long guess 
   expect(seen.asks[0]).toContain('keep going until it is done')
   expect(seen.asks[0]).toContain('Leave out irreversible or outward steps')
   expect(seen.shown).toEqual([BRIEF])
+  // Every Autopilot brief is Fable's.
+  expect(seen.models.length).toBeGreaterThan(0)
+  expect([...new Set(seen.models)]).toEqual(['claude-fable-5-2'])
+  expect([...new Set(seen.caps)]).toEqual([8_000])
+  expect([...new Set(seen.efforts)]).toEqual(['high'])
 
   const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await band.find({ type: 'Text', text: BRIEF })).toBeDefined()
@@ -589,7 +599,7 @@ test('/suggest thorough asks for a whole task, keeps it, and draws a long guess 
 
   expect((await $.command.run(slash('mode loud'))).text).toContain('Unknown option "loud"')
   // The old names still work.
-  expect((await $.command.run(slash('medium'))).text).toContain('Suggestion mode: Push.')
+  expect((await $.command.run(slash('medium'))).text).toContain('Suggestion mode: Push (Opus 5.5).')
   expect(store.get('length')).toBe('medium')
 })
 
@@ -610,6 +620,8 @@ test('the dropdown on the band asks again at the new length, where a long guess 
   // Short asks for 2-12 words, so the long reply is dropped twice.
   expect(seen.asks).toHaveLength(3)
   expect(seen.asks[1]).toContain('2-12 words')
+  // The new mode's model writes the new guess.
+  expect(seen.models).toEqual(['claude-fable-5-2', 'claude-sonnet-5-5', 'claude-sonnet-5-5'])
   expect(seen.shown).toEqual([BRIEF])
   expect([...files.values()][0]).toContain('dropped too_many_words (length changed)')
   expect([...files.values()][0]).toContain('length short: asking again')
@@ -641,6 +653,9 @@ test('a medium guess may run to two sentences', async ($, on) => {
   await turn($, WARM)
   await clock.advance(SHOWS)
   expect(seen.asks[0]).toContain('10-40 words')
+  expect(seen.models).toEqual(['claude-opus-5-5'])
+  expect(seen.caps).toEqual([2_048])
+  expect(seen.efforts).toEqual(['medium'])
   expect(seen.shown).toEqual([medium])
 })
 

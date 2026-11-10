@@ -11,10 +11,10 @@ It adds a strip above the prompt box:
 - **History row** (top): your latest prompt, with ▲ ▼ to step back through earlier ones. While your newest prompt is still on screen the row stays hidden (`/pin-prompt smart` turns that off). `/prompts` lists them all in a pane; click one to copy it.
 - **Suggestion** (under it, desktop app): what you would likely type next. Click it to put it in the box; a suggestion over 80 characters wraps, with a **Use it** button instead. Nothing is sent until you press Enter. The line hides while Claude is working and clears when you send your next message.
 - **Why and recap**: a one-sentence reason and a few words on Claude's last reply, on the dim line under the suggestion.
-- **Mode**: how far the suggestion goes.
-  - **Nudge** (the default): 2–12 words, like Claude Code's own suggestion.
-  - **Push**: one or two sentences (10–40 words) naming the concrete next task and the files or checks it involves.
-  - **Autopilot**: a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. Opus is told to leave out deploying, pushing, merging, migrations, seed scripts and deleting data unless you already asked for them in the chat, so read a brief before you send it.
+- **Mode**: how far the suggestion goes, and which model writes it.
+  - **Nudge** (the default, Sonnet 5.5): 2–12 words, like Claude Code's own suggestion.
+  - **Push** (Opus 5.5): one or two sentences (10–40 words) naming the concrete next task and the files or checks it involves.
+  - **Autopilot** (Fable 5.2): a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. Fable is told to leave out deploying, pushing, merging, migrations, seed scripts and deleting data unless you already asked for them in the chat, so read a brief before you send it.
 - **Less / More**: fold the suggestion to one line, or show it in full. Your Mode and view are remembered across chats.
 
 ### Modes
@@ -61,8 +61,8 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 
 | Command | What it does |
 | --- | --- |
-| `/suggest` | Shows what the suggestion did this session, the current Mode and view |
-| `/suggest nudge` · `push` · `autopilot` | Sets the Mode and rewrites the current suggestion |
+| `/suggest` | Shows what the suggestion did this session, the current Mode and its model, and the view |
+| `/suggest nudge` · `push` · `autopilot` | Sets the Mode (and so the model) and rewrites the current suggestion |
 | `/suggest compact` · `full` | Folds the suggestion to one line, or shows it in full |
 | `/prompts` | Lists every prompt of the session in a pane |
 | `/pin-prompt` | Jumps the history row back to your newest prompt; `/pin-prompt smart` toggles hiding it while your newest prompt is on screen |
@@ -70,11 +70,13 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 ## How it works
 
 1. When Claude's reply ends (or you open a chat that has no suggestion yet), the mod gathers your last few prompts and the end of the reply.
-2. It asks Opus, in a side call outside your chat, for three lines: the suggestion, why, and a recap. The Mode sets how long the suggestion may be and how much of the session Opus reads.
+2. It asks the Mode's model (Sonnet 5.5, Opus 5.5 or Fable 5.2), in a side call outside your chat, for three lines: the suggestion, why, and a recap. The Mode also sets how long the suggestion may be and how much of the session the model reads.
 3. It checks the suggestion the way Claude Code checks its own (length, no "Let me…", no "looks good") and asks once more if it fails or comes back empty. If the second answer fails too, the line stays empty for that reply.
 4. It shows the result in the strip and, where the app allows, as the dim suggestion inside the box.
 
-**Cost:** every reply makes one Opus call on your own account, a second when the first suggestion fails the checks, and another each time you change the Mode. Autopilot calls are larger.
+**Cost:** every reply makes one call to the Mode's model on your own account, a second when the first suggestion fails the checks, and another each time you change the Mode. Autopilot calls are the largest, and Fable is the priciest of the three models.
+
+**Models:** each mode names a fixed model version. If your account can't use one, that mode's line stays empty and the log names the model and the error; pick another mode.
 
 **Desktop and terminal:** the suggestion strip draws in the desktop app's Code tab. In a terminal the mod fills in Claude Code's own suggestion on the turns where it skips one, and the history row adds a **Go to** button that scrolls the chat to that prompt (the desktop app does not let a mod scroll the chat).
 

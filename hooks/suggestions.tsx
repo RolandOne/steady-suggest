@@ -1,18 +1,10 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, ModelUsage, On, RenderInput, SessionMessage } from 'claude-code'
+import type { EngineInterface, ModelEffort, ModelUsage, On, RenderInput, SessionMessage } from 'claude-code'
 
 import type { Length } from '../types'
 
 const PLUGIN = 'steady-suggest'
-// Opus at the person's request (2026-11-03): with the app's own suggestion
-// turned off nothing races it, so a slower, better guess is fine while the
-// band above the box says one is on its way.
-const MODEL = 'opus'
 const THINKING = 'Thinking of a suggestion'
-// The terminal hint line's idle text. The status line under the box carried it
-// too until the person had that line removed (2026-11-04): the band above the
-// box already shows the guess.
-const BADGE = `✦ Suggestions by steady-suggest (${MODEL})`
 // The line stays up at least this long: a quick answer flashed it by too fast
 // to notice (the person's report, 2026-11-03).
 const THINKING_MIN_MS = 2_000
@@ -93,10 +85,20 @@ WHY: one short sentence, under 15 words, on why they would type it next
 SUMMARY: Claude's latest reply in under 15 words`
 
 interface LengthRule {
+  // Which model writes the guess, as a full id (a pinned version, not an
+  // alias that moves), and the name the person sees for it.
+  model: string
+  modelName: string
+  // How hard the model thinks about it. Set for every mode so a model's own
+  // default (Sonnet's is high) never decides how long a nudge takes.
+  effort: ModelEffort
   // How the guess is asked for, after the shared instructions.
   format: string
   maxWords: number
   maxChars: number
+  // The reply's token cap. These models always think, and the thinking counts
+  // against it, so it leaves room for that; maxWords and maxChars are what keep
+  // the guess short. Only the tokens used are billed.
   maxTokens: number
   // How much of the session the model reads: the end of Claude's reply and
   // the person's last few prompts.
@@ -107,24 +109,37 @@ interface LengthRule {
 // Short is Claude Code's own size. The longer ones hand Claude more of the
 // work in one go (the person's ask, 2026-11-05: "carry out most of the feature
 // until completion"), so they read more of the session and get more tokens.
+// Each mode has its own model, the person's pick (2026-11-10): Sonnet for the
+// quick nudge, Opus for the next task, Fable for a brief Claude runs alone.
+// With the app's own suggestion off nothing races them, so a slower, better
+// guess is fine while the band says one is on its way.
 const LENGTHS: Record<Length, LengthRule> = {
   short: {
+    model: 'claude-sonnet-5-5',
+    modelName: 'Sonnet 5.5',
+    effort: 'low',
     format: "Format: 2-12 words, one sentence, match the user's style. Or nothing.",
     maxWords: 12,
     maxChars: 100,
-    maxTokens: 200,
+    maxTokens: 1_024,
     answerChars: 3_000,
     prompts: 3,
   },
   medium: {
+    model: 'claude-opus-5-5',
+    modelName: 'Opus 5.5',
+    effort: 'medium',
     format: "Format: one or two sentences, 10-40 words, in the user's style. Name the concrete next task and the files, commands or checks it involves. Or nothing.",
     maxWords: 50,
     maxChars: 360,
-    maxTokens: 350,
+    maxTokens: 2_048,
     answerChars: 5_000,
     prompts: 4,
   },
   thorough: {
+    model: 'claude-fable-5-2',
+    modelName: 'Fable 5.2',
+    effort: 'high',
     // The person clicks it without always rereading it, so a brief never
     // carries a step that can't be taken back unless they already asked for it.
     format: [
@@ -138,7 +153,7 @@ const LENGTHS: Record<Length, LengthRule> = {
     ].join(' '),
     maxWords: 170,
     maxChars: 1_200,
-    maxTokens: 900,
+    maxTokens: 8_000,
     answerChars: 10_000,
     prompts: 6,
   },
@@ -309,6 +324,13 @@ function lengthNamed(word: string) {
   return LENGTH_NAMES.find(name => LENGTH_LABELS[name].toLowerCase() === word)
 }
 
+// The terminal hint line's idle text, naming the model the current mode uses.
+// The status line under the box carried it too until the person had that line
+// removed (2026-11-04): the band above the box already shows the guess.
+function badge(length: Length) {
+  return `✦ Suggestions by steady-suggest (${LENGTHS[length].modelName})`
+}
+
 function thinkingText(length: Length) {
   if (length === 'short') return `${THINKING}…`
   const label = LENGTH_LABELS[length]
@@ -384,9 +406,14 @@ async function guess($: EngineInterface, ask: string, why: string, rule: LengthR
     const retry = tries === 0 ? '' : `\n\nYour last guess "${picked.text}" was rejected (${rejected}). Give a different one.`
     // An empty or failed answer is retried once, told why; only a call that
     // gets no answer at all ends the loop early.
-    const reply = await $.model.complete({ model: MODEL, prompt: ask + retry, maxTokens: rule.maxTokens })
+    const reply = await $.model.complete({
+      model: rule.model,
+      prompt: ask + retry,
+      maxTokens: rule.maxTokens,
+      effort: rule.effort,
+    })
     if (!reply.isAnswered) {
-      await note($, `no reply (${why}): ${reply.reason}`)
+      await note($, `no reply (${why}, ${rule.model}): ${reply.reason}`)
 
       return undefined
     }
@@ -543,7 +570,7 @@ function status(length: Length, isCompact: boolean) {
   const lines = recent.length > 0 ? recent.map(line => `- ${line}`).join('\n') : '- nothing yet'
 
   return [
-    `Fill-in suggestions are always on. Mode: ${LENGTH_LABELS[length]} (/suggest nudge, push or autopilot).`,
+    `Fill-in suggestions are always on. Mode: ${LENGTH_LABELS[length]}, written by ${LENGTHS[length].modelName} (/suggest nudge, push or autopilot).`,
     `View: ${isCompact ? 'one line' : 'full'} (/suggest compact or full).`,
     `This session:\n${lines}`,
   ].join(' ')
@@ -639,7 +666,7 @@ export function registerSuggestions(on: On) {
     const why = await chooseLength($, length)
     const again = why === 'asking again' ? ' Writing a new suggestion for this reply.' : ''
 
-    return { text: `Suggestion mode: ${LENGTH_LABELS[length]}.${again}` }
+    return { text: `Suggestion mode: ${LENGTH_LABELS[length]} (${LENGTHS[length].modelName}).${again}` }
   })
 
   // The hint line under the prompt: dots while a guess is on its way, else
@@ -670,7 +697,7 @@ export function registerSuggestions(on: On) {
       )
     }
     const text = await read($, suggestion)
-    if (text === null) return <Text dimColor>{BADGE}</Text>
+    if (text === null) return <Text dimColor>{badge(await read($, lengthChoice))}</Text>
 
     return <Button key="take" plain label={`✦ ${text}`} onPress={() => take($, text)} />
   })
