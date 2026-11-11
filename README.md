@@ -14,7 +14,7 @@ It adds a strip above the prompt box:
 - **Mode**: how far the suggestion goes, and which model writes it.
   - **Nudge** (the default, Sonnet 5.5): 2–12 words, like Claude Code's own suggestion.
   - **Push** (Opus 5.5): one or two sentences (10–40 words) naming the concrete next task and the files or checks it involves.
-  - **Autopilot** (Fable 5.2): a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. Fable is told to leave out deploying, pushing, merging, migrations, seed scripts and deleting data unless you already asked for them in the chat, so read a brief before you send it.
+  - **Autopilot** (Fable 5.2): a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. Fable is told to leave out deploying, pushing, merging, migrations, seed scripts, deleting data and posting comments or messages unless you already asked for them in the chat, so read a brief before you send it.
 - **Less / More**: fold the suggestion to one line, or show it in full. Your Mode and view are remembered across chats.
 
 ### Modes
@@ -71,8 +71,10 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 
 1. When Claude's reply ends (or you open a chat that has no suggestion yet), the mod gathers your last few prompts and the end of the reply.
 2. It asks the Mode's model (Sonnet 5.5, Opus 5.5 or Fable 5.2), in a side call outside your chat, for three lines: the suggestion, why, and a recap. The Mode also sets how long the suggestion may be and how much of the session the model reads.
-3. It checks the suggestion the way Claude Code checks its own (length, no "Let me…", no "looks good") and asks once more if it fails or comes back empty. If the second answer fails too, the line stays empty for that reply.
+3. It checks the suggestion the way Claude Code checks its own (length, no "Let me…", no "looks good") and asks once more if it fails, saying what was wrong. If the second answer fails too, the line stays empty for that reply.
 4. It shows the result in the strip and, where the app allows, as the dim suggestion inside the box.
+
+**When the line stays empty on purpose:** the model is told to write nothing when Claude got your request wrong (you will want to put that right in your own words), when Claude is waiting on something only you can do and nothing else is left to suggest, or when the message itself would do harm, such as one that would have to contain a password. That silence stands for the reply; the log line starts with `silent` and gives the reason. A suggestion never says you did something the chat does not show ("I ran it", "signed in"), because Claude would take it as fact.
 
 **Cost:** every reply makes one call to the Mode's model on your own account, a second when the first suggestion fails the checks, and another each time you change the Mode. Autopilot calls are the largest, and Fable is the priciest of the three models.
 

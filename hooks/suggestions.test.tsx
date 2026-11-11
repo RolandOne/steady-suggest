@@ -155,6 +155,7 @@ const BAND = {
   requestId: 'band',
   props: {
     hasSurvey: false,
+    isCollapsed: false,
     isWorking: false,
     maxRows: 10,
     bodyColumns: 80,
@@ -310,7 +311,8 @@ test('a chat reopened after a restart suggests from its last reply, asked once',
 
   await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
   await clock.advance(SHOWS)
-  expect(seen.asks[0]).toContain('<reply>\nAdded it.\n</reply>')
+  // The session's text sits in blocks whose tags share an id made for this ask.
+  expect(seen.asks[0]).toMatch(/<reply id="(\w+)">\nAdded it\.\n<\/reply id="\1">/)
   expect(seen.shown).toEqual(['commit it'])
   expect([...files.values()][0]).toContain('shown (chat reopened): commit it')
 
@@ -443,7 +445,8 @@ test('a return after the model stayed silent does not ask again', async ($, on) 
   await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
   await clock.advance(SHOWS)
   expect(seen.shown).toEqual([])
-  expect(seen.asks).toHaveLength(2)
+  // Silence stands: no second try for the turn, none on the return.
+  expect(seen.asks).toHaveLength(1)
 })
 
 test('the hint line says the mod runs here until there is a guess, then offers it until the next turn', async ($, on) => {
@@ -551,14 +554,17 @@ test('the band gives the latest reply in a few words and why the guess fits', as
 })
 
 test('an empty NEXT line is the model staying silent', async ($, on) => {
-  const reply = 'NEXT:\nWHY: The last step failed.\nSUMMARY: The build broke.'
-  const { clock, seen } = engine(on, { ...DESKTOP, reply })
+  const reply = 'NEXT:\nWHY: Claude built the wrong thing.\nSUMMARY: The build broke.'
+  const { clock, seen, files } = engine(on, { ...DESKTOP, reply })
   stepWith(on, WARM)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
 
   await turn($, WARM)
   await clock.advance(SHOWS)
   expect(seen.shown).toEqual([])
+  // It is not asked to guess again, and the log keeps its reason.
+  expect(seen.asks).toHaveLength(1)
+  expect([...files.values()][0]).toContain('silent (app, claude-sonnet-5-5): Claude built the wrong thing.')
   const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await band.find({ type: 'Text', text: /The build broke/ })).toBeUndefined()
 })
@@ -581,8 +587,8 @@ test('/suggest thorough asks for a whole task, keeps it, and draws a long guess 
 
   await turn($, WARM)
   await clock.advance(SHOWS)
-  expect(seen.asks[0]).toContain('keep going until it is done')
-  expect(seen.asks[0]).toContain('Leave out irreversible or outward steps')
+  expect(seen.asks[0]).toContain('keep going until it gets there')
+  expect(seen.asks[0]).toContain('Leave out steps that are hard to undo')
   expect(seen.shown).toEqual([BRIEF])
   // Every Autopilot brief is Fable's.
   expect(seen.models.length).toBeGreaterThan(0)
@@ -617,13 +623,15 @@ test('the dropdown on the band asks again at the new length, where a long guess 
   await band.select({ key: 'length', value: 'short' })
   expect(store.get('length')).toBe('short')
   await clock.advance(SHOWS)
-  // Short asks for 2-12 words, so the long reply is dropped twice.
+  // Short asks for 2 to 8 words, so the long reply is dropped twice.
   expect(seen.asks).toHaveLength(3)
-  expect(seen.asks[1]).toContain('2-12 words')
+  expect(seen.asks[1]).toContain('2 to 8 words')
+  // The second try is told what was wrong with the first.
+  expect(seen.asks[2]).toContain('was rejected (too_many_words): it must be well under 12 words')
   // The new mode's model writes the new guess.
   expect(seen.models).toEqual(['claude-fable-5-2', 'claude-sonnet-5-5', 'claude-sonnet-5-5'])
   expect(seen.shown).toEqual([BRIEF])
-  expect([...files.values()][0]).toContain('dropped too_many_words (length changed)')
+  expect([...files.values()][0]).toContain('dropped too_many_words (length changed, claude-sonnet-5-5)')
   expect([...files.values()][0]).toContain('length short: asking again')
 })
 
@@ -644,6 +652,26 @@ test('a thorough guess may name a glob, and a very long one is cut short in the 
   expect(seen.fills).toEqual([glob])
 })
 
+test('a long guess may mention silence in passing, a short one that is only about it is dropped', async ($, on) => {
+  const brief =
+    'Replay the three modes on the audit turns from the log and check that the credential silence is ' +
+    'gone, that Nudge stays silent when Claude is waiting on me, and that nothing claims I ran a command.'
+  const world = { ...DESKTOP, reply: `NEXT: ${brief}`, store: { length: 'thorough' } }
+  const { clock, seen, files } = engine(on, world)
+  stepWith(on, WARM)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+  await turn($, WARM)
+  await clock.advance(SHOWS)
+  expect(seen.shown).toEqual([brief])
+
+  world.reply = 'NEXT: silence is best here'
+  await turn($, WARM)
+  await clock.advance(SHOWS)
+  expect(seen.shown).toEqual([brief])
+  expect([...files.values()][0]).toContain('dropped meta_text (app, claude-fable-5-2): silence is best here')
+})
+
 test('a medium guess may run to two sentences', async ($, on) => {
   const medium = 'Run the band specs again. Then restart the app and check the switch.'
   const { clock, seen } = engine(on, { ...DESKTOP, reply: `NEXT: ${medium}`, store: { length: 'medium' } })
@@ -652,7 +680,7 @@ test('a medium guess may run to two sentences', async ($, on) => {
 
   await turn($, WARM)
   await clock.advance(SHOWS)
-  expect(seen.asks[0]).toContain('10-40 words')
+  expect(seen.asks[0]).toContain('10 to 40 words')
   expect(seen.models).toEqual(['claude-opus-5-5'])
   expect(seen.caps).toEqual([2_048])
   expect(seen.efforts).toEqual(['medium'])
