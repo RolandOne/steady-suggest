@@ -112,10 +112,26 @@ Claude finished a refactor and listed two call sites it left alone: Update the t
 // blockers, exact names for what is and is not approved, and a closing
 // summary that stands on its own. It is written as prose because the brief
 // must be prose, and a prompt's own format shows up in its output.
+const HANDOVER = `Write the message they would send to hand Claude the whole next piece of work to run on its own. Say what Claude could not work out alone: the goal, with the files, commands or areas the conversation named for it; what done looks like, as something Claude can check itself (tests or a build passing, a page behaving a certain way, a question answered with evidence); and any limit the developer set earlier in the session, such as read-only, one environment, or files to leave alone. Ask Claude to keep going until it gets there, or until an investigation reaches a conclusion, working through ordinary errors on its own and stopping early only for something it needs from the developer. Ask it to finish with a short summary that stands on its own: what it did, what it found, what is left.
+Stay within what this conversation is building: no unrelated new ideas.`
+
+// Autopilot stays on the person's machine: by 2026-11-17 a third of its
+// briefs told Claude not to push, and the person likes that it "just grinds
+// locally".
 const AUTOPILOT = `Size: one paragraph of plain sentences, 60 to 150 words, written the way they write. The app draws it as a single paragraph and discards anything longer than 170 words.
-Write the message they would send to hand Claude the whole next piece of work to run on its own. Say what Claude could not work out alone: the goal, with the files, commands or areas the conversation named for it; what done looks like, as something Claude can check itself (tests or a build passing, a page behaving a certain way, a question answered with evidence); and any limit the developer set earlier in the session, such as read-only, one environment, or files to leave alone. Ask Claude to keep going until it gets there, or until an investigation reaches a conclusion, working through ordinary errors on its own and stopping early only for something it needs from the developer. Ask it to finish with a short summary that stands on its own: what it did, what it found, what is left.
-Stay within what this conversation is building: no unrelated new ideas.
+${HANDOVER}
 Leave out steps that are hard to undo or that reach beyond the developer's machine (deploying, pushing, merging, running migrations or seed scripts, deleting data, posting comments or messages) unless the developer already asked for that step in this session; then name the exact step.`
+
+// Agentic is Autopilot that ends in a pull request (the person's ask,
+// 2026-11-18: "actually does some PRs but no merge or deploys"). The brief
+// names what is approved (commit, push the branch, the pull request) and what
+// is not, because Claude acts on exactly what a message approves. Picking the
+// mode is the person's standing yes to those three steps; everything else
+// that reaches outward still needs their word in the session.
+const AGENTIC = `Size: one paragraph of plain sentences, 80 to 170 words, written the way they write. The app draws it as a single paragraph and discards anything longer than 200 words.
+${HANDOVER}
+This mode ends in a pull request and goes no further. When the work changes files, ask Claude to finish, once it is done and checked, by committing on the branch the session is working on, or on a new branch if that is the default branch, pushing that branch, and opening a pull request, or updating the one this session already opened, with a description of what changed, how it was checked and what is left. Have the message say that Claude must not merge the pull request, deploy, push to the default branch or force-push. When the work changes no files, such as an investigation, ask for the findings and no pull request.
+Leave out running migrations or seed scripts, deleting data, and posting comments or messages other than the pull request itself, unless the developer already asked for that step in this session; then name the exact step.`
 
 // NEXT comes first so a reply cut short still carries the guess. The reason
 // is asked for a silence too, so the log says why a turn got no suggestion.
@@ -208,12 +224,30 @@ const LENGTHS: Record<Length, LengthRule> = {
     answerChars: 10_000,
     prompts: 6,
   },
+  // Autopilot's model and reading; the brief also carries the hand-off to a
+  // pull request, so it may run a little longer.
+  agentic: {
+    model: 'claude-fable-5-2',
+    modelName: 'Fable 5.2',
+    effort: 'high',
+    format: AGENTIC,
+    maxWords: 200,
+    maxChars: 1_400,
+    maxTokens: 8_000,
+    answerChars: 10_000,
+    prompts: 6,
+  },
 }
 
-const LENGTH_NAMES: readonly Length[] = ['short', 'medium', 'thorough']
-// The names the person sees (their pick, 2026-11-05); the stored values stay
-// short, medium and thorough.
-const LENGTH_LABELS: Record<Length, string> = { short: 'Nudge', medium: 'Push', thorough: 'Autopilot' }
+const LENGTH_NAMES: readonly Length[] = ['short', 'medium', 'thorough', 'agentic']
+// The names the person sees (their picks, 2026-11-05 and 2026-11-18); the
+// stored values stay short, medium, thorough and agentic.
+const LENGTH_LABELS: Record<Length, string> = {
+  short: 'Nudge',
+  medium: 'Push',
+  thorough: 'Autopilot',
+  agentic: 'Agentic',
+}
 const LENGTH_KEY = 'length'
 // A guess longer than this is drawn as wrapping text with its own button: a
 // button's label never wraps on the desktop.
@@ -652,7 +686,7 @@ function status(length: Length, isCompact: boolean) {
   const lines = recent.length > 0 ? recent.map(line => `- ${line}`).join('\n') : '- nothing yet'
 
   return [
-    `Fill-in suggestions are always on. Mode: ${LENGTH_LABELS[length]}, written by ${LENGTHS[length].modelName} (/suggest nudge, push or autopilot).`,
+    `Fill-in suggestions are always on. Mode: ${LENGTH_LABELS[length]}, written by ${LENGTHS[length].modelName} (/suggest nudge, push, autopilot or agentic).`,
     `View: ${isCompact ? 'one line' : 'full'} (/suggest compact or full).`,
     `This session:\n${lines}`,
   ].join(' ')
@@ -663,7 +697,7 @@ export async function startSuggestions($: EngineInterface) {
   await $.command.register({
     name: 'suggest',
     description: 'Show what the suggestion fill-in did, or set its mode',
-    argumentHint: 'nudge | push | autopilot | compact | full',
+    argumentHint: 'nudge | push | autopilot | agentic | compact | full',
   })
   // The length and the view are the person's standing choices, so every
   // session starts with them.
@@ -743,7 +777,7 @@ export function registerSuggestions(on: On) {
     }
     const length = lengthNamed(arg)
     if (length === undefined) {
-      return { text: `Unknown option "${arg}". Use /suggest nudge, /suggest push or /suggest autopilot.` }
+      return { text: `Unknown option "${arg}". Use /suggest nudge, /suggest push, /suggest autopilot or /suggest agentic.` }
     }
     const why = await chooseLength($, length)
     const again = why === 'asking again' ? ' Writing a new suggestion for this reply.' : ''

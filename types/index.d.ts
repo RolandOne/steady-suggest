@@ -17,8 +17,9 @@ export interface SuggestionDetail {
 export type Detail = SuggestionDetail | null
 // How long and detailed the guess is, shown as the Mode: short (Nudge) is
 // Claude Code's own size, thorough (Autopilot) hands Claude a whole piece of
-// work. Kept across sessions in the plugin's store.
-export type Length = 'short' | 'medium' | 'thorough'
+// work to run on the person's machine, and agentic (Agentic) is that brief
+// ending in a pull request. Kept across sessions in the plugin's store.
+export type Length = 'short' | 'medium' | 'thorough' | 'agentic'
 // True when the strip folds the guess to one line. Kept across sessions in
 // the plugin's store.
 export type IsCompact = boolean

@@ -589,6 +589,8 @@ test('/suggest thorough asks for a whole task, keeps it, and draws a long guess 
   await clock.advance(SHOWS)
   expect(seen.asks[0]).toContain('keep going until it gets there')
   expect(seen.asks[0]).toContain('Leave out steps that are hard to undo')
+  // Autopilot stays on the person's machine: the pull request is Agentic's.
+  expect(seen.asks[0]).not.toContain('pull request')
   expect(seen.shown).toEqual([BRIEF])
   // Every Autopilot brief is Fable's.
   expect(seen.models.length).toBeGreaterThan(0)
@@ -607,6 +609,40 @@ test('/suggest thorough asks for a whole task, keeps it, and draws a long guess 
   // The old names still work.
   expect((await $.command.run(slash('medium'))).text).toContain('Suggestion mode: Push (Opus 5.5).')
   expect(store.get('length')).toBe('medium')
+})
+
+test('/suggest agentic asks for a brief that ends in a pull request and goes no further', async ($, on) => {
+  const { clock, seen, store } = engine(on, { ...DESKTOP, reply: LONG_REPLY })
+  stepWith(on, WARM)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+  const set = await $.command.run(slash('agentic'))
+  expect(set.text).toBe('Suggestion mode: Agentic (Fable 5.2). Writing a new suggestion for this reply.')
+  expect(store.get('length')).toBe('agentic')
+
+  await turn($, WARM)
+  await clock.advance(SHOWS)
+  // The same hand-over as Autopilot, then the three steps the mode approves
+  // and the ones it never does.
+  expect(seen.asks[0]).toContain('keep going until it gets there')
+  expect(seen.asks[0]).toContain('pushing that branch, and opening a pull request')
+  expect(seen.asks[0]).toContain('must not merge the pull request, deploy, push to the default branch or force-push')
+  expect(seen.asks[0]).not.toContain('Leave out steps that are hard to undo')
+  expect([...new Set(seen.models)]).toEqual(['claude-fable-5-2'])
+  expect([...new Set(seen.efforts)]).toEqual(['high'])
+  expect(seen.shown).toEqual([BRIEF])
+
+  // The dropdown offers it, and picking another mode there leaves it.
+  const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await band.find({ key: 'length' })).toBeDefined()
+  await band.select({ key: 'length', value: 'thorough' })
+  expect(store.get('length')).toBe('thorough')
+  await band.select({ key: 'length', value: 'agentic' })
+  expect(store.get('length')).toBe('agentic')
+  await band.unmount()
+
+  expect((await $.command.run(slash(''))).text).toContain('Mode: Agentic, written by Fable 5.2')
+  expect((await $.command.run(slash('loud'))).text).toContain('/suggest autopilot or /suggest agentic')
 })
 
 test('the dropdown on the band asks again at the new length, where a long guess is refused', async ($, on) => {
