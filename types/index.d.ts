@@ -32,6 +32,9 @@ declare module 'claude-code' {
       stepsBack: number
       isSmart: boolean
       isOffScreen: boolean | null
+      // True when the person has hidden the history row. Kept across sessions
+      // in the plugin's store.
+      isHistoryHidden: boolean
       isThinking: IsThinking
       suggestion: Suggestion
       detail: Detail

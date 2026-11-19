@@ -174,6 +174,71 @@ test('the pane lists every prompt, newest first', async ($, on) => {
   }
 })
 
+function pin(args: string) {
+  return {
+    command: 'pin-prompt',
+    args,
+    origin: { kind: 'composer' },
+    presentation: { isFullscreen: false, columns: 80 },
+  } as const
+}
+
+// The plugin's store, as the engine keeps it across sessions.
+function keep(on: On, kept: Record<string, unknown> = {}) {
+  const store = new Map<string, unknown>(Object.entries(kept))
+  on('store.get', (_, e) => ({ value: store.get(e.key) }))
+  on('store.set', (_, e) => {
+    store.set(e.key, e.value)
+
+    return { value: undefined }
+  })
+
+  return store
+}
+
+test('/pin-prompt hide takes the history row away and remembers it; show brings it back', async ($, on) => {
+  engine(on)
+  const store = keep(on)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  await $.prompt.submit(typed('first question'))
+
+  const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await before.find(COUNTER))?.text).toBe('1/1')
+  await before.unmount()
+
+  expect((await $.command.run(pin('hide'))).text).toContain('History row hidden in every chat')
+  expect(store.get('historyHidden')).toBe(true)
+  await $.prompt.submit(typed('second question'))
+  const hidden = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await hidden.find(COUNTER)).toBeUndefined()
+  expect(await hidden.find({ type: 'Text', text: /second question/ })).toBeUndefined()
+  await hidden.unmount()
+
+  // The prompts are still kept: the pane lists them.
+  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect((await pane.find({ type: 'Button', text: /^\d+\. / }))?.text).toBe('2. second question')
+  await pane.unmount()
+
+  expect((await $.command.run(pin('show'))).text).toBe('History row shown.')
+  expect(store.get('historyHidden')).toBe(false)
+  const shown = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await shown.find(COUNTER))?.text).toBe('2/2')
+  await shown.unmount()
+})
+
+test('a new session starts with the history row hidden when the last one hid it', async ($, on) => {
+  engine(on, [
+    { role: 'user', text: 'older ask' },
+    { role: 'assistant', text: 'done' },
+  ])
+  keep(on, { historyHidden: true })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await ui.find(COUNTER)).toBeUndefined()
+  await ui.unmount()
+})
+
 test('a resumed session pins the transcript’s last prompt', async ($, on) => {
   engine(on, [
     { role: 'user', text: 'older ask' },
