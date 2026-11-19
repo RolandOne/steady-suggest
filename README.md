@@ -8,7 +8,7 @@ It adds a strip above the prompt box:
 
 <sub>Screens are design mock-ups of the desktop app's Code tab, drawn with a sample conversation. The real strip uses the app's own fonts and colours. Their sources are in <code>docs/mockups</code>; <code>shoot.mjs</code> there renders them.</sub>
 
-- **History row** (top): your latest prompt, with ▲ ▼ to step back through earlier ones. While your newest prompt is still on screen the row stays hidden (`/pin-prompt smart` turns that off). `/prompts` lists them all in a pane; click one to copy it.
+- **History row** (top): your latest prompt, with ▲ ▼ to step back through earlier ones. While your newest prompt is still on screen the row stays hidden (`/pin-prompt smart` turns that off). `/pin-prompt hide` takes the row away in every chat, and `/pin-prompt show` brings it back. `/prompts` lists them all in a pane; click one to copy it.
 - **Suggestion** (under it, desktop app): what you would likely type next. Click it to put it in the box; a suggestion over 80 characters wraps, with a **Use it** button instead. Nothing is sent until you press Enter. The line hides while Claude is working and clears when you send your next message.
 - **Why and recap**: a one-sentence reason and a few words on Claude's last reply, on the dim line under the suggestion.
 - **Mode**: how far the suggestion goes, and which model writes it.
@@ -66,7 +66,7 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 | `/suggest nudge` · `push` · `autopilot` · `agentic` | Sets the Mode (and so the model) and rewrites the current suggestion |
 | `/suggest compact` · `full` | Folds the suggestion to one line, or shows it in full |
 | `/prompts` | Lists every prompt of the session in a pane |
-| `/pin-prompt` | Jumps the history row back to your newest prompt; `/pin-prompt smart` toggles hiding it while your newest prompt is on screen |
+| `/pin-prompt` | Jumps the history row back to your newest prompt; `/pin-prompt smart` toggles hiding it while your newest prompt is on screen; `/pin-prompt hide` and `/pin-prompt show` turn the row off and on for every chat |
 
 ## How it works
 

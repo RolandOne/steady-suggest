@@ -16,6 +16,11 @@ const prompts = atom({ plugin: 'steady-suggest', key: 'prompts' } as const, [])
 const stepsBack = atom({ plugin: 'steady-suggest', key: 'stepsBack' } as const, 0)
 const isSmart = atom({ plugin: 'steady-suggest', key: 'isSmart' } as const, true)
 const isOffScreen = atom({ plugin: 'steady-suggest', key: 'isOffScreen' } as const, null)
+// The row taken away altogether (the person's ask, 2026-11-20: they did not
+// find it useful). Kept across sessions in the store; `/prompts` still lists
+// every prompt.
+const isHidden = atom({ plugin: 'steady-suggest', key: 'isHistoryHidden' } as const, false)
+const HIDDEN_KEY = 'historyHidden'
 
 // The person's own words reach prompt.submit from the terminal (composer), the
 // phone (bridge) or the desktop app (sdk); everything else is a notification,
@@ -121,6 +126,11 @@ async function goToRow($: EngineInterface, text: string) {
   }
 }
 
+async function setHidden($: EngineInterface, hidden: boolean) {
+  await update($, isHidden, () => hidden)
+  await $.store.set(HIDDEN_KEY, hidden).catch(() => undefined)
+}
+
 function openPane($: EngineInterface) {
   return $.ui.open({ id: PANE, title: 'Prompts' })
 }
@@ -153,9 +163,13 @@ export async function registerHistoryCommands($: EngineInterface) {
   })
   await $.command.register({
     name: 'pin-prompt',
-    description: 'Jump the history row back to your newest prompt, or toggle smart mode',
-    argumentHint: 'smart',
+    description: 'Jump the history row back to your newest prompt, toggle smart mode, or hide the row',
+    argumentHint: 'smart | hide | show',
   })
+  // Hiding the row is the person's standing choice, so every session starts
+  // with it.
+  const hidden = await $.store.get(HIDDEN_KEY).catch(() => undefined)
+  if (typeof hidden === 'boolean') await update($, isHidden, () => hidden)
 }
 
 // After the session starts.
@@ -221,6 +235,15 @@ export function registerHistory(on: On) {
           : 'Smart mode off: the pin always shows.',
       }
     }
+    if (arg === 'hide' || arg === 'show') {
+      await setHidden($, arg === 'hide')
+
+      return {
+        text: arg === 'hide'
+          ? 'History row hidden in every chat. /pin-prompt show brings it back; /prompts still lists your prompts.'
+          : 'History row shown.',
+      }
+    }
     await update($, stepsBack, () => 0)
 
     return { text: 'Pin back on your newest prompt.' }
@@ -283,6 +306,8 @@ export function registerHistory(on: On) {
 // earlier one ▲ ▼ stepped to, laid out like a sent message (text at the right
 // edge, the controls at the left). Undefined where it has nothing to show.
 export async function drawHistory($: EngineInterface, e: RenderInput<'AbovePrompt'>) {
+  if (await read($, isHidden)) return undefined
+
   const list = await read($, prompts)
   const back = Math.min(await read($, stepsBack), list.length - 1)
   const shown = list[list.length - 1 - back]
