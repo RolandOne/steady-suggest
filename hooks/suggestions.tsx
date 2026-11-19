@@ -127,10 +127,15 @@ Leave out steps that are hard to undo or that reach beyond the developer's machi
 // names what is approved (commit, push the branch, the pull request) and what
 // is not, because Claude acts on exactly what a message approves. Picking the
 // mode is the person's standing yes to those three steps; everything else
-// that reaches outward still needs their word in the session.
+// that reaches outward still needs their word in the session. The pull
+// request is a regular one (the person's choice, 2026-11-18), and the brief
+// has to say so: a bare "open a pull request" leaves draft or not to the
+// repository's own habits. Asked for inside the list of steps, "not a
+// draft" was dropped from one brief in three; asked for beside the bans,
+// which no brief has dropped, it stays.
 const AGENTIC = `Size: one paragraph of plain sentences, 80 to 170 words, written the way they write. The app draws it as a single paragraph and discards anything longer than 200 words.
 ${HANDOVER}
-This mode ends in a pull request and goes no further. When the work changes files, ask Claude to finish, once it is done and checked, by committing on the branch the session is working on, or on a new branch if that is the default branch, pushing that branch, and opening a pull request, or updating the one this session already opened, with a description of what changed, how it was checked and what is left. Have the message say that Claude must not merge the pull request, deploy, push to the default branch or force-push. When the work changes no files, such as an investigation, ask for the findings and no pull request.
+This mode ends in a pull request and goes no further. When the work changes files, ask Claude to finish, once it is done and checked, by committing on the branch the session is working on, or on a new branch if that is the default branch, pushing that branch, and opening a pull request, or updating the one this session already opened, with a description of what changed, how it was checked and what is left. Have the message say two things in so many words, because Claude acts on exactly what a message says: that the pull request is ready for review, not a draft; and that Claude must not merge the pull request, deploy, push to the default branch or force-push. When the work changes no files, such as an investigation, ask for the findings and no pull request.
 Leave out running migrations or seed scripts, deleting data, and posting comments or messages other than the pull request itself, unless the developer already asked for that step in this session; then name the exact step.`
 
 // NEXT comes first so a reply cut short still carries the guess. The reason

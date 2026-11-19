@@ -626,6 +626,8 @@ test('/suggest agentic asks for a brief that ends in a pull request and goes no 
   // and the ones it never does.
   expect(seen.asks[0]).toContain('keep going until it gets there')
   expect(seen.asks[0]).toContain('pushing that branch, and opening a pull request')
+  // A regular pull request, and the brief is to say so beside the bans.
+  expect(seen.asks[0]).toContain('that the pull request is ready for review, not a draft; and that Claude')
   expect(seen.asks[0]).toContain('must not merge the pull request, deploy, push to the default branch or force-push')
   expect(seen.asks[0]).not.toContain('Leave out steps that are hard to undo')
   expect([...new Set(seen.models)]).toEqual(['claude-fable-5-2'])

@@ -15,7 +15,7 @@ It adds a strip above the prompt box:
   - **Nudge** (the default, Sonnet 5.5): 2–12 words, like Claude Code's own suggestion.
   - **Push** (Opus 5.5): one or two sentences (10–40 words) naming the concrete next task and the files or checks it involves.
   - **Autopilot** (Fable 5.2): a full hand-off brief (goal, steps, what done looks like, keep going until done unless blocked) so Claude can carry a feature or an investigation through. Fable is told to leave out deploying, pushing, merging, migrations, seed scripts, deleting data and posting comments or messages unless you already asked for them in the chat, so read a brief before you send it.
-  - **Agentic** (Fable 5.2): the Autopilot brief, ending in a pull request. Claude is asked to finish the work, commit it on a branch, push that branch and open a pull request (or update the one the chat already opened), and told not to merge, deploy, push to the default branch or force-push. Work that changes no files, such as an investigation, gets no pull request. Picking this mode is your yes to those three steps, so read a brief before you send it.
+  - **Agentic** (Fable 5.2): the Autopilot brief, ending in a pull request. Claude is asked to finish the work, commit it on a branch, push that branch and open a pull request that is ready for review, not a draft (or update the one the chat already opened), and told not to merge, deploy, push to the default branch or force-push. Work that changes no files, such as an investigation, gets no pull request. Picking this mode is your yes to those three steps, so read a brief before you send it.
 - **Less / More**: fold the suggestion to one line, or show it in full. Your Mode and view are remembered across chats.
 
 ### Modes
